@@ -34,7 +34,9 @@ public class PlayerController : MonoBehaviour
     [SerializeField]
     private float _doubleJumpSpeed = 8.0f;
     [SerializeField]
-    private float _wallJumpAmount = 1.5f;
+    private float _wallJumpXAmount = 1.0f;
+    [SerializeField]
+    private float _wallJumpYAmount = 1.4f;
     #endregion
 
     #region Player States
@@ -163,15 +165,15 @@ public class PlayerController : MonoBehaviour
                 {
                     if (_moveDirection.x > 0)
                     {
-                        _moveDirection.x = -_jumpSpeed * _wallJumpAmount;
-                        _moveDirection.y = _jumpSpeed * _wallJumpAmount;
+                        _moveDirection.x = -_jumpSpeed * _wallJumpXAmount;
+                        _moveDirection.y = _jumpSpeed * _wallJumpYAmount;
                         RotatePlayer("left");
                         _wallJumpedRight = true;
                     }
                     else if (_moveDirection.x < 0)
                     {
-                        _moveDirection.x = _jumpSpeed * _wallJumpAmount;
-                        _moveDirection.y = _jumpSpeed * _wallJumpAmount;
+                        _moveDirection.x = _jumpSpeed * _wallJumpXAmount;
+                        _moveDirection.y = _jumpSpeed * _wallJumpYAmount;
                         RotatePlayer("right");
                         _wallJumpedRight = false;
                     }
