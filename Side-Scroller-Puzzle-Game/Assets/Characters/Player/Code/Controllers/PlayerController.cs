@@ -16,9 +16,13 @@ public class PlayerController : MonoBehaviour
     #region Player Abilities
     [Header("Player Abilities")]
     [SerializeField]
-    private bool _canDoubleJump = true;
+    private bool _enableDoubleJump = true;
     [SerializeField]
-    private bool _canWallJump = true;
+    private bool _enableWallJump = true;
+    [SerializeField]
+    private bool _enableWallRun = true;
+    [SerializeField]
+    private bool _enableWallRunAfterWallJump = true;
     #endregion
 
     #region Physics Variables
@@ -27,16 +31,23 @@ public class PlayerController : MonoBehaviour
     private float _gravity = 20.0f;
     [SerializeField]
     private Vector3 _moveDirection = new Vector3(0, 0, 0);
+    // Walking
     [SerializeField]
     private float _walkSpeed = 6.0f;
     [SerializeField]
+    // Jumping
     private float _jumpSpeed = 8.0f;
+    // Double Jumping
     [SerializeField]
     private float _doubleJumpSpeed = 8.0f;
+    // Wall Jumping
     [SerializeField]
     private float _wallJumpXAmount = 1.0f;
     [SerializeField]
     private float _wallJumpYAmount = 1.4f;
+    // Wall Running
+    [SerializeField]
+    private float _wallRunAmount = 2f;
     #endregion
 
     #region Player States
@@ -48,16 +59,19 @@ public class PlayerController : MonoBehaviour
     [SerializeField]
     private bool _isJumping;
     [SerializeField]
-    private bool _doubleJumped;
+    private bool _doubleJumping;
     [SerializeField]
     private bool _wallJumped;
+    [SerializeField]
+    private bool _isWallRunning;
     #endregion
 
     #region Variable Checks
     private bool _wallJumpedRight;
+    [SerializeField]
+    private bool _canWallRun;
+
     #endregion
-
-
 
 
     // Awake is called after a prefab is instantiated
@@ -75,7 +89,6 @@ public class PlayerController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        print(flags);
         if (_wallJumped == false)
         {
             _moveDirection.x = Input.GetAxis("Horizontal");
@@ -88,7 +101,7 @@ public class PlayerController : MonoBehaviour
             // Values to reset once grounded
             _moveDirection.y = 0;
             _isJumping = false;
-            _doubleJumped = false;
+            _doubleJumping = false;           
 
             // Change is facing value depending on moving direction
             if (_moveDirection.x > 0)
@@ -109,12 +122,16 @@ public class PlayerController : MonoBehaviour
             {
                 _moveDirection.y = _jumpSpeed;
                 _isJumping = true;
+                // player can wallRun
+                _canWallRun = true;
             }
         }
 
         // Is Player in the air
         else
         {
+
+
             // Did the player let go of jump button
             if (Input.GetButtonUp("Jump"))
             {
@@ -128,13 +145,13 @@ public class PlayerController : MonoBehaviour
             if (Input.GetButtonDown("Jump"))
             {
                 // has the ability to double jump..
-                if (_canDoubleJump)
+                if (_enableDoubleJump)
                 {
                     // hasn't double jumped already
-                    if (!_doubleJumped)
+                    if (!_doubleJumping)
                     {
                         _moveDirection.y = _doubleJumpSpeed;
-                        _doubleJumped = true;
+                        _doubleJumping = true;
                     }
                 }
             }
@@ -159,16 +176,35 @@ public class PlayerController : MonoBehaviour
         // Is there anything to the left or right of the player
         if (flags.left || flags.right)
         {
-            if (_canWallJump)
+            if (_enableWallRun)
             {
-                if (Input.GetButtonDown("Jump") && _wallJumped == false && _isGrounded == false)
+                if (_canWallRun)
+                {
+                    if (_moveDirection.x > 0 && _canWallRun)
+                    {
+                        _moveDirection.y = _jumpSpeed / _wallRunAmount;
+                        StartCoroutine("WallRunTimer");
+                        RotatePlayer("right");
+                    }
+                    else if (_moveDirection.x < 0 && _canWallRun)
+                    {
+                        _moveDirection.y = _jumpSpeed / _wallRunAmount;
+                        StartCoroutine("WallRunTimer");
+                        RotatePlayer("left");
+                    }
+                }
+            }
+            if (_enableWallJump)
+            {
+                if (Input.GetButtonDown("Jump") && !_wallJumped && !_isGrounded)
                 {
                     if (_moveDirection.x > 0)
                     {
                         _moveDirection.x = -_jumpSpeed * _wallJumpXAmount;
                         _moveDirection.y = _jumpSpeed * _wallJumpYAmount;
                         RotatePlayer("left");
-                        _wallJumpedRight = true;
+                        _wallJumpedRight =true;
+
                     }
                     else if (_moveDirection.x < 0)
                     {
@@ -176,10 +212,20 @@ public class PlayerController : MonoBehaviour
                         _moveDirection.y = _jumpSpeed * _wallJumpYAmount;
                         RotatePlayer("right");
                         _wallJumpedRight = false;
+
                     }
 
-                    StartCoroutine(WallJumpTimer());
+                    StartCoroutine("WallJumpTimer");
                 }
+            }
+        }
+        else
+        {
+            if (_enableWallRunAfterWallJump)
+            {
+                StopCoroutine("WallRunTimer");
+                _canWallRun = true;
+                
             }
         }
     }
@@ -200,10 +246,26 @@ public class PlayerController : MonoBehaviour
 
     }
 
+
+    #region Coroutines
     IEnumerator WallJumpTimer()
     {
         _wallJumped = true;
         yield return new WaitForSeconds(0.35f);
         _wallJumped = false;
     }
+
+    IEnumerator WallRunTimer()
+    {
+        _isWallRunning = true;
+        _canWallRun = true;
+        yield return new WaitForSeconds(0.5f);
+        _isWallRunning = false;
+        _canWallRun = false;
+
+
+
+    }
+
+    #endregion
 }
