@@ -64,12 +64,15 @@ public class PlayerController : MonoBehaviour
     private bool _wallJumped;
     [SerializeField]
     private bool _isWallRunning;
+    [SerializeField]
+    private bool _isWallSliding;
     #endregion
 
     #region Variable Checks
-    private bool _wallJumpedRight;
     [SerializeField]
     private bool _canWallRun;
+    private int previousWallSideNumber;
+    private int currentWallSideNumber;
 
     #endregion
 
@@ -101,7 +104,10 @@ public class PlayerController : MonoBehaviour
             // Values to reset once grounded
             _moveDirection.y = 0;
             _isJumping = false;
-            _doubleJumping = false;           
+            _doubleJumping = false;
+            previousWallSideNumber = 0;
+            currentWallSideNumber = 0;
+            _isWallSliding = false;
 
             // Change is facing value depending on moving direction
             if (_moveDirection.x > 0)
@@ -130,6 +136,21 @@ public class PlayerController : MonoBehaviour
         // Is Player in the air
         else
         {
+            // Variable Resets
+            _isWallSliding = false;
+
+            if (_moveDirection.x > 0)
+            {
+                RotatePlayer("right");
+            }
+            else if (_moveDirection.x < 0)
+            {
+                RotatePlayer("left");
+            }
+            else
+            {
+                // IDLE
+            }
 
 
             // Did the player let go of jump button
@@ -157,15 +178,17 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        if (_isGrounded == false) { _moveDirection.y -= _gravity * Time.deltaTime; }
-        
-
         _characterController.move(_moveDirection * Time.deltaTime);
 
         // Checking Player flags/Collision states
         flags = _characterController.collisionState;
 
         _isGrounded = flags.below;
+
+        if (_isGrounded == false)
+        {
+            _moveDirection.y -= _gravity * Time.deltaTime;
+        }
 
         //Is there anything above the player
         if (flags.above)
@@ -178,20 +201,44 @@ public class PlayerController : MonoBehaviour
         {
             if (_enableWallRun)
             {
+                // Wall Sliding
+                if (_moveDirection.y < -0.4)
+                {
+                    _isWallSliding = true;
+                }
+                else
+                {
+                    _isWallSliding = false;
+                }
+
+                // Wall Running
                 if (_canWallRun)
                 {
-                    if (_moveDirection.x > 0 && _canWallRun)
+                    if (_moveDirection.x > 0 && _canWallRun && previousWallSideNumber != 2)
                     {
                         _moveDirection.y = _jumpSpeed / _wallRunAmount;
                         StartCoroutine("WallRunTimer");
                         RotatePlayer("right");
+                        currentWallSideNumber = 2;
                     }
-                    else if (_moveDirection.x < 0 && _canWallRun)
+                    else if (_moveDirection.x < 0 && _canWallRun && previousWallSideNumber != 1)
                     {
                         _moveDirection.y = _jumpSpeed / _wallRunAmount;
                         StartCoroutine("WallRunTimer");
                         RotatePlayer("left");
+                        currentWallSideNumber = 1;
+                    }                    
+                }
+                else
+                {
+                    if (_moveDirection.x > 0)
+                    {
+                        RotatePlayer("right");
                     }
+                    else if (_moveDirection.x < 0)
+                    {
+                        RotatePlayer("left");
+                    }                
                 }
             }
             if (_enableWallJump)
@@ -203,16 +250,12 @@ public class PlayerController : MonoBehaviour
                         _moveDirection.x = -_jumpSpeed * _wallJumpXAmount;
                         _moveDirection.y = _jumpSpeed * _wallJumpYAmount;
                         RotatePlayer("left");
-                        _wallJumpedRight =true;
-
                     }
                     else if (_moveDirection.x < 0)
                     {
                         _moveDirection.x = _jumpSpeed * _wallJumpXAmount;
                         _moveDirection.y = _jumpSpeed * _wallJumpYAmount;
                         RotatePlayer("right");
-                        _wallJumpedRight = false;
-
                     }
 
                     StartCoroutine("WallJumpTimer");
@@ -221,12 +264,19 @@ public class PlayerController : MonoBehaviour
         }
         else
         {
+
+            // variable reset
+            _isWallSliding = false;
+
             if (_enableWallRunAfterWallJump)
             {
                 StopCoroutine("WallRunTimer");
-                _canWallRun = true;
-                
+                _canWallRun = true;            
             }
+
+            _isWallRunning = false;
+            // No longer touching well, therefore set previous wall to equal the wall that was just run/jumped from
+            previousWallSideNumber = currentWallSideNumber;
         }
     }
 
