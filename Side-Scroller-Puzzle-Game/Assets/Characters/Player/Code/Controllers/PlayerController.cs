@@ -44,10 +44,12 @@ public class PlayerController : MonoBehaviour
     [SerializeField]
     private float _wallJumpXAmount = 1.0f;
     [SerializeField]
-    private float _wallJumpYAmount = 1.4f;
+    private float _wallJumpYAmount = 1.1f;
     // Wall Running
     [SerializeField]
-    private float _wallRunAmount = 2f;
+    private float _wallRunSpeed = 18f;
+    [SerializeField]
+    private float _wallSlideSpeed = 3f;
     #endregion
 
     #region Player States
@@ -183,7 +185,8 @@ public class PlayerController : MonoBehaviour
         // Checking Player flags/Collision states
         flags = _characterController.collisionState;
 
-        _isGrounded = flags.below;
+        _isGrounded = _characterController.isGrounded;
+        //_isGrounded = flags.below;
 
         if (_isGrounded == false)
         {
@@ -205,6 +208,8 @@ public class PlayerController : MonoBehaviour
                 if (_moveDirection.y < -0.4)
                 {
                     _isWallSliding = true;
+                    _moveDirection.y = -(_wallSlideSpeed);
+
                 }
                 else
                 {
@@ -216,14 +221,14 @@ public class PlayerController : MonoBehaviour
                 {
                     if (_moveDirection.x > 0 && _canWallRun && previousWallSideNumber != 2)
                     {
-                        _moveDirection.y = _jumpSpeed / _wallRunAmount;
+                        _moveDirection.y = _wallRunSpeed;
                         StartCoroutine("WallRunTimer");
                         RotatePlayer("right");
                         currentWallSideNumber = 2;
                     }
                     else if (_moveDirection.x < 0 && _canWallRun && previousWallSideNumber != 1)
                     {
-                        _moveDirection.y = _jumpSpeed / _wallRunAmount;
+                        _moveDirection.y = _wallRunSpeed;
                         StartCoroutine("WallRunTimer");
                         RotatePlayer("left");
                         currentWallSideNumber = 1;

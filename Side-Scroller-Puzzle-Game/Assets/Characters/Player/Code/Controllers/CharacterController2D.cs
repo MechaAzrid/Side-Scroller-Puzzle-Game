@@ -17,7 +17,7 @@ public class CharacterController2D : MonoBehaviour
 		public Vector3 bottomRight;
 		public Vector3 bottomLeft;
 	}
-
+    [Serializable]
 	public class CharacterCollisionState2D
 	{
 		public bool right;

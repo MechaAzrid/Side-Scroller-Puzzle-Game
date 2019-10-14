@@ -316,18 +316,28 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _characterController: {fileID: 0}
+  flags:
+    right: 0
+    left: 0
+    above: 0
+    below: 0
+    becameGroundedThisFrame: 0
+    wasGroundedLastFrame: 0
+    movingDownSlope: 0
+    slopeAngle: 0
   _enableDoubleJump: 1
   _enableWallJump: 1
   _enableWallRun: 1
   _enableWallRunAfterWallJump: 1
-  _gravity: 20
+  _gravity: 30
   _moveDirection: {x: 0, y: 0, z: 0}
   _walkSpeed: 12
   _jumpSpeed: 16
   _doubleJumpSpeed: 16
-  _wallJumpXAmount: 1.6
-  _wallJumpYAmount: 2.1
-  _wallRunAmount: 4
+  _wallJumpXAmount: 1.4
+  _wallJumpYAmount: 1.7
+  _wallRunSpeed: 6.5
+  _wallSlideSpeed: 3
   _isGrounded: 0
   isFacingRight: 0
   _isJumping: 0
