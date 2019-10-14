@@ -28,7 +28,7 @@ public class PlayerController : MonoBehaviour
     #region Physics Variables
     [Header("Physics Variables")]
     [SerializeField]
-    private float _gravity = 20.0f;
+    private float _gravity = 40.0f;
     [SerializeField]
     private Vector3 _moveDirection = new Vector3(0, 0, 0);
     // Walking
