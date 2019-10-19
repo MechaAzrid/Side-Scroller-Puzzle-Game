@@ -5,13 +5,26 @@ using Prime31;
 
 public class PlayerController : MonoBehaviour
 {
+
+
     [Header("Components")]
     [SerializeField]
     private CharacterController2D _characterController;
 
-    [Header("Collision flags")]
+    #region Environment Variables
+
+    private enum groundType
+    {
+        None, // in air 
+        LevelGeometry, // level geometry
+        OneWayPlatform // 1way platforms
+    }
     [SerializeField]
-    public CharacterController2D.CharacterCollisionState2D flags;
+    private groundType _groundType;
+    #endregion
+
+    [Header("Collision flags")]
+    private CharacterController2D.CharacterCollisionState2D flags;
 
     #region Player Abilities
     [Header("Player Abilities")]
@@ -31,11 +44,13 @@ public class PlayerController : MonoBehaviour
     private float _gravity = 40.0f;
     [SerializeField]
     private Vector3 _moveDirection = new Vector3(0, 0, 0);
+    //Up/Down input
+    private float _verticalInput = 0;
     // Walking
     [SerializeField]
     private float _walkSpeed = 6.0f;
-    [SerializeField]
     // Jumping
+    [SerializeField]
     private float _jumpSpeed = 8.0f;
     // Double Jumping
     [SerializeField]
@@ -50,6 +65,8 @@ public class PlayerController : MonoBehaviour
     private float _wallRunSpeed = 18f;
     [SerializeField]
     private float _wallSlideSpeed = 3f;
+    // length of ground type detection ray
+    private float GroundCheckRayLength = 3.5f;
     #endregion
 
     #region Player States
@@ -75,9 +92,16 @@ public class PlayerController : MonoBehaviour
     private bool _canWallRun;
     private int previousWallSideNumber;
     private int currentWallSideNumber;
+    [SerializeField]
+    private LayerMask layerMask;
 
     #endregion
 
+
+    #region Platforms
+    [SerializeField]
+    private GameObject _tempOneWayPlatform;
+    #endregion
 
     // Awake is called after a prefab is instantiated
     private void Awake()
@@ -94,22 +118,22 @@ public class PlayerController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        GetGroundType();
+
         if (_wallJumped == false)
         {
             _moveDirection.x = Input.GetAxis("Horizontal");
             _moveDirection.x *= _walkSpeed;
+
+            _verticalInput = Input.GetAxis("Vertical");
         }
 
         // Is Player on the ground
         if (_isGrounded)
         {
             // Values to reset once grounded
-            _moveDirection.y = 0;
-            _isJumping = false;
-            _doubleJumping = false;
-            previousWallSideNumber = 0;
-            currentWallSideNumber = 0;
-            _isWallSliding = false;
+            GroundVariableReset();
+
 
             // Change is facing value depending on moving direction
             if (_moveDirection.x > 0)
@@ -120,18 +144,24 @@ public class PlayerController : MonoBehaviour
             {
                 RotatePlayer("left");
             }
+            // IDLE
             else
             {
-                // IDLE
+
+            }
+
+            if (_verticalInput < 0)
+            {
+                if (_groundType == groundType.OneWayPlatform)
+                {
+                    StartCoroutine(DisableOneWayPlatform());
+                }
             }
 
             // Jump 
             if (Input.GetButtonDown("Jump"))
             {
-                _moveDirection.y = _jumpSpeed;
-                _isJumping = true;
-                // player can wallRun
-                _canWallRun = true;
+                Jump();
             }
         }
 
@@ -173,8 +203,7 @@ public class PlayerController : MonoBehaviour
                     // hasn't double jumped already
                     if (!_doubleJumping)
                     {
-                        _moveDirection.y = _doubleJumpSpeed;
-                        _doubleJumping = true;
+                        DoubleJump();
                     }
                 }
             }
@@ -204,69 +233,19 @@ public class PlayerController : MonoBehaviour
         {
             if (_enableWallRun)
             {
-                // Wall Sliding
-                if (_moveDirection.y < -0.4)
-                {
-                    _isWallSliding = true;
-                    _moveDirection.y = -(_wallSlideSpeed);
+                WallSlide();
 
-                }
-                else
-                {
-                    _isWallSliding = false;
-                }
-
-                // Wall Running
-                if (_canWallRun)
-                {
-                    if (_moveDirection.x > 0 && _canWallRun && previousWallSideNumber != 2)
-                    {
-                        _moveDirection.y = _wallRunSpeed;
-                        StartCoroutine("WallRunTimer");
-                        RotatePlayer("right");
-                        currentWallSideNumber = 2;
-                    }
-                    else if (_moveDirection.x < 0 && _canWallRun && previousWallSideNumber != 1)
-                    {
-                        _moveDirection.y = _wallRunSpeed;
-                        StartCoroutine("WallRunTimer");
-                        RotatePlayer("left");
-                        currentWallSideNumber = 1;
-                    }                    
-                }
-                else
-                {
-                    if (_moveDirection.x > 0)
-                    {
-                        RotatePlayer("right");
-                    }
-                    else if (_moveDirection.x < 0)
-                    {
-                        RotatePlayer("left");
-                    }                
-                }
+                WallRun();
             }
             if (_enableWallJump)
             {
                 if (Input.GetButtonDown("Jump") && !_wallJumped && !_isGrounded)
                 {
-                    if (_moveDirection.x > 0)
-                    {
-                        _moveDirection.x = -_jumpSpeed * _wallJumpXAmount;
-                        _moveDirection.y = _jumpSpeed * _wallJumpYAmount;
-                        RotatePlayer("left");
-                    }
-                    else if (_moveDirection.x < 0)
-                    {
-                        _moveDirection.x = _jumpSpeed * _wallJumpXAmount;
-                        _moveDirection.y = _jumpSpeed * _wallJumpYAmount;
-                        RotatePlayer("right");
-                    }
-
-                    StartCoroutine("WallJumpTimer");
+                    WallJump();
                 }
             }
         }
+        // if there is nothing to the left or right of the player
         else
         {
 
@@ -276,7 +255,7 @@ public class PlayerController : MonoBehaviour
             if (_enableWallRunAfterWallJump)
             {
                 StopCoroutine("WallRunTimer");
-                _canWallRun = true;            
+                _canWallRun = true;
             }
 
             _isWallRunning = false;
@@ -285,8 +264,97 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+
+    void GroundVariableReset()
+    {
+        _moveDirection.y = 0;
+        _isJumping = false;
+        _doubleJumping = false;
+        previousWallSideNumber = 0;
+        currentWallSideNumber = 0;
+        _isWallSliding = false;
+    }
+
+    void Jump()
+    {
+        _moveDirection.y = _jumpSpeed;
+        _isJumping = true;
+        _canWallRun = true;
+    }
+
+    void DoubleJump()
+    {
+        _moveDirection.y = _doubleJumpSpeed;
+        _doubleJumping = true;
+    }
+
+    void WallJump()
+    {
+        if (_moveDirection.x > 0)
+        {
+            _moveDirection.x = -_jumpSpeed * _wallJumpXAmount;
+            _moveDirection.y = _jumpSpeed * _wallJumpYAmount;
+            RotatePlayer("left");
+        }
+        else if (_moveDirection.x < 0)
+        {
+            _moveDirection.x = _jumpSpeed * _wallJumpXAmount;
+            _moveDirection.y = _jumpSpeed * _wallJumpYAmount;
+            RotatePlayer("right");
+        }
+
+        StartCoroutine("WallJumpTimer");
+    }
+
+    void WallRun()
+    {
+
+        if (_canWallRun)
+        {
+            if (_moveDirection.x > 0 && _canWallRun && previousWallSideNumber != 2)
+            {
+                _moveDirection.y = _wallRunSpeed;
+                StartCoroutine("WallRunTimer");
+                RotatePlayer("right");
+                currentWallSideNumber = 2;
+            }
+            else if (_moveDirection.x < 0 && _canWallRun && previousWallSideNumber != 1)
+            {
+                _moveDirection.y = _wallRunSpeed;
+                StartCoroutine("WallRunTimer");
+                RotatePlayer("left");
+                currentWallSideNumber = 1;
+            }
+        }
+        else
+        {
+            if (_moveDirection.x > 0)
+            {
+                RotatePlayer("right");
+            }
+            else if (_moveDirection.x < 0)
+            {
+                RotatePlayer("left");
+            }
+        }
+    }
+
+    void WallSlide()
+    {
+        if (_moveDirection.y < -0.4)
+        {
+            _isWallSliding = true;
+            _moveDirection.y = -(_wallSlideSpeed);
+
+        }
+        else
+        {
+            _isWallSliding = false;
+        }
+    }
+
     // rotate player based on direction : left or right
-    public void RotatePlayer(string direction)
+    void RotatePlayer(string direction)
     {
         if (direction == "right")
         {
@@ -301,6 +369,38 @@ public class PlayerController : MonoBehaviour
 
     }
 
+    void GetGroundType()
+    {
+        RaycastHit2D groundhit = Physics2D.Raycast(transform.position, -Vector3.up, GroundCheckRayLength, layerMask);
+
+        if (groundhit)
+        {
+
+            string layerName = LayerMask.LayerToName(groundhit.transform.gameObject.layer);
+
+            if (layerName == "OneWayPlatform")
+            {
+                _groundType = groundType.OneWayPlatform;
+                if (!_tempOneWayPlatform)
+                {
+                    _tempOneWayPlatform = groundhit.transform.gameObject;
+                }
+            }
+            else if (layerName == "LevelGeometry")
+            {
+                _groundType = groundType.LevelGeometry;
+            }
+            else
+            {
+                _groundType = groundType.None;
+            }
+        }
+        else
+        {
+            print("NOT HIT");
+            _groundType = groundType.None;
+        }
+    }
 
     #region Coroutines
     IEnumerator WallJumpTimer()
@@ -317,10 +417,21 @@ public class PlayerController : MonoBehaviour
         yield return new WaitForSeconds(0.5f);
         _isWallRunning = false;
         _canWallRun = false;
-
-
-
     }
 
+    IEnumerator DisableOneWayPlatform()
+    {
+        if (_tempOneWayPlatform)
+        {
+            _tempOneWayPlatform.GetComponent<EdgeCollider2D>().enabled = false;
+        }
+        yield return new WaitForSeconds(0.5f);
+
+        if (_tempOneWayPlatform)
+        {
+            _tempOneWayPlatform.GetComponent<EdgeCollider2D>().enabled = true;
+            _tempOneWayPlatform = null;
+        }
+    }
     #endregion
 }
