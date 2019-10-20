@@ -40,22 +40,24 @@ public class PlayerController : MonoBehaviour
 
     #region Physics Variables
     [Header("Physics Variables")]
-    [SerializeField]
-    private float _gravity = 40.0f;
+    private float _gravity = 35.0f;
+    private float _gravityAcceleration = 1.9f;
     [SerializeField]
     private Vector3 _moveDirection = new Vector3(0, 0, 0);
     //Up/Down input
     private float _verticalInput = 0;
     // Walking
     [SerializeField]
-    private float _walkSpeed = 6.0f;
+    private float _walkSpeed = 16.0f;
     // Jumping
     [SerializeField]
-    private float _jumpSpeed = 8.0f;
+    private float _jumpSpeed = 25f;
     // Double Jumping
     [SerializeField]
-    private float _doubleJumpSpeed = 8.0f;
+    private float _doubleJumpSpeed = 20f;
     // Wall Jumping
+    [SerializeField]
+    private float _wallJumpPower = 18.0f;
     [SerializeField]
     private float _wallJumpXAmount = 1.0f;
     [SerializeField]
@@ -95,6 +97,12 @@ public class PlayerController : MonoBehaviour
     [SerializeField]
     private LayerMask layerMask;
 
+    private float jumpPressedRemember = 0f;
+    private float jumpPressedRememberTime = 0.2f;
+
+    private float groundedRemember = 0f;
+    private float groundedRememberTime = 0.15f;
+
     #endregion
 
 
@@ -120,6 +128,9 @@ public class PlayerController : MonoBehaviour
     {
         GetGroundType();
 
+        jumpPressedRemember -= Time.deltaTime;
+        groundedRemember -= Time.deltaTime;
+
         if (_wallJumped == false)
         {
             _moveDirection.x = Input.GetAxis("Horizontal");
@@ -128,12 +139,19 @@ public class PlayerController : MonoBehaviour
             _verticalInput = Input.GetAxis("Vertical");
         }
 
+        if (Input.GetButtonDown("Jump"))
+        {
+            jumpPressedRemember = jumpPressedRememberTime;
+
+        }
+
         // Is Player on the ground
         if (_isGrounded)
         {
             // Values to reset once grounded
             GroundVariableReset();
 
+            groundedRemember = groundedRememberTime;
 
             // Change is facing value depending on moving direction
             if (_moveDirection.x > 0)
@@ -154,12 +172,13 @@ public class PlayerController : MonoBehaviour
             {
                 if (_groundType == groundType.OneWayPlatform)
                 {
+                    print("DO IT");
                     StartCoroutine(DisableOneWayPlatform());
                 }
             }
 
             // Jump 
-            if (Input.GetButtonDown("Jump"))
+            if (jumpPressedRemember > 0 && groundedRemember > 0)
             {
                 Jump();
             }
@@ -190,7 +209,7 @@ public class PlayerController : MonoBehaviour
             {
                 if (_moveDirection.y > 0)
                 {
-                    _moveDirection.y = _moveDirection.y * 0.5f;
+                    _moveDirection.y = _moveDirection.y * 0.4f;
                 }
             }
 
@@ -214,13 +233,25 @@ public class PlayerController : MonoBehaviour
         // Checking Player flags/Collision states
         flags = _characterController.collisionState;
 
-        _isGrounded = _characterController.isGrounded;
-        //_isGrounded = flags.below;
-
-        if (_isGrounded == false)
+        // Hopefully this doesn't bite me in the ass later :'(
+        if (_moveDirection.y != 0 || _moveDirection.x != 0)
         {
-            _moveDirection.y -= _gravity * Time.deltaTime;
+            _isGrounded = flags.below;
         }
+
+        if (!_isGrounded)
+        {
+            if (_moveDirection.y > -60)
+            {
+                _moveDirection.y -= (_gravity * Time.deltaTime) * _gravityAcceleration;
+            }
+            else
+            {
+                _moveDirection.y = -60;
+            }
+           
+        }
+        //moveDirection.y -= (gravity * Time.deltaTime) * 2.1f;
 
         //Is there anything above the player
         if (flags.above)
@@ -277,6 +308,9 @@ public class PlayerController : MonoBehaviour
 
     void Jump()
     {
+        jumpPressedRemember = 0f;
+        groundedRemember = 0f;
+
         _moveDirection.y = _jumpSpeed;
         _isJumping = true;
         _canWallRun = true;
@@ -284,7 +318,7 @@ public class PlayerController : MonoBehaviour
 
     void DoubleJump()
     {
-        _moveDirection.y = _doubleJumpSpeed;
+        _moveDirection.y = _jumpSpeed;//_doubleJumpSpeed;
         _doubleJumping = true;
     }
 
@@ -292,14 +326,14 @@ public class PlayerController : MonoBehaviour
     {
         if (_moveDirection.x > 0)
         {
-            _moveDirection.x = -_jumpSpeed * _wallJumpXAmount;
-            _moveDirection.y = _jumpSpeed * _wallJumpYAmount;
+            _moveDirection.x = -_wallJumpPower * _wallJumpXAmount;
+            _moveDirection.y = _wallJumpPower * _wallJumpYAmount;
             RotatePlayer("left");
         }
         else if (_moveDirection.x < 0)
         {
-            _moveDirection.x = _jumpSpeed * _wallJumpXAmount;
-            _moveDirection.y = _jumpSpeed * _wallJumpYAmount;
+            _moveDirection.x = _wallJumpPower * _wallJumpXAmount;
+            _moveDirection.y = _wallJumpPower * _wallJumpYAmount;
             RotatePlayer("right");
         }
 
@@ -397,7 +431,7 @@ public class PlayerController : MonoBehaviour
         }
         else
         {
-            print("NOT HIT");
+            //print("NOT HIT");
             _groundType = groundType.None;
         }
     }
