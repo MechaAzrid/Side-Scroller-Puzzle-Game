@@ -234,7 +234,7 @@ public class PlayerController : MonoBehaviour
         flags = _characterController.collisionState;
 
         // Hopefully this doesn't bite me in the ass later :'(
-        if (_moveDirection.y != 0 || _moveDirection.x != 0)
+        if (_moveDirection.y != 0 )//|| _moveDirection.x != 0
         {
             _isGrounded = flags.below;
         }
