@@ -232,12 +232,12 @@ public class PlayerController : MonoBehaviour
 
         // Checking Player flags/Collision states
         flags = _characterController.collisionState;
-
+        _isGrounded = flags.below;
         // Hopefully this doesn't bite me in the ass later :'(
-        if (_moveDirection.y != 0 )//|| _moveDirection.x != 0
+        /*if (_moveDirection.y != 0 || _moveDirection.x != 0)//
         {
             _isGrounded = flags.below;
-        }
+        }*/
 
         if (!_isGrounded)
         {
