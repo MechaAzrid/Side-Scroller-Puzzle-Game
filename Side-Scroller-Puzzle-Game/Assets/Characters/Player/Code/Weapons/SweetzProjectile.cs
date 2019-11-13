@@ -18,6 +18,6 @@ public class SweetzProjectile : MonoBehaviour
     {
         Debug.Log(hitInfo.name);
         Destroy(rb);
-        //Destroy(gameObject);
+        Destroy(gameObject, 2.5f);
     }
 }
