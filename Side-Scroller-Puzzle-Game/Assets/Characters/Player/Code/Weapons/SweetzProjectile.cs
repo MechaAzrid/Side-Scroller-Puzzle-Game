@@ -17,6 +17,7 @@ public class SweetzProjectile : MonoBehaviour
     void OnTriggerEnter2D(Collider2D hitInfo)
     {
         Debug.Log(hitInfo.name);
-        Destroy(gameObject);
+        Destroy(rb);
+        //Destroy(gameObject);
     }
 }
